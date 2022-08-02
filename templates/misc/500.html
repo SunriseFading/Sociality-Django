@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %} Error 500 | Sociality {% endblock %}
+{% block header %} Error 500 {% endblock %}
+{% block content %}
+
+  <main role="main" class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <p class="lead">Error on the server, try refreshing the page or contact later</p>
+        <p class="lead"><a href="{% url 'posts' %}">Go back to the main page</a></p>
+      </div>
+    </div>
+  </main>
+
+{% endblock %}
