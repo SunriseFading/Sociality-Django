@@ -1,3 +1,4 @@
+import contextlib
 import os
 from shutil import rmtree
 from uuid import uuid1
@@ -20,45 +21,23 @@ class ViewsTests(TestCase):
         MEDIA_ROOT was change for test files delete in tearDown method
         """
         super().setUpClass()
-        test_view_media_root = os.path.join(settings.MEDIA_ROOT,
-                                            'test_temp_files')
-        try:
+        test_view_media_root = os.path.join(settings.MEDIA_ROOT, 'test_temp_files')
+        with contextlib.suppress(FileExistsError):
             os.mkdir(test_view_media_root)
-        except FileExistsError:
-            pass
         settings.MEDIA_ROOT = test_view_media_root
         cls.unauthorized_client = Client()
-        cls.first_user = User.objects.create_user(
-            username=str(uuid1()),
-            first_name=str(uuid1()),
-            last_name=str(uuid1()),
-        )
-        cls.first_group = Group.objects.create(
-            title=str(uuid1()),
-            slug='first_slug',
-            description=str(uuid1()),
-        )
-        cls.first_post = Post.objects.create(
-            text=str(uuid1()),
-            group=cls.first_group,
-            author=cls.first_user,
-        )
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04'
-            b'\x01\x0a\x00\x01\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02'
-            b'\x02\x4c\x01\x00\x3b'
-        )
-        cls.first_post.image = SimpleUploadedFile(
-                name=str(uuid1()) + '.gif',
-                content=small_gif,
-                content_type='image/gif')
+        cls.first_user = User.objects.create_user(username=str(uuid1()), first_name=str(uuid1()), last_name=str(uuid1()))
+
+        cls.first_group = Group.objects.create(title=str(uuid1()), slug='first_slug', description=str(uuid1()))
+
+        cls.first_post = Post.objects.create(text=str(uuid1()), group=cls.first_group, author=cls.first_user)
+
+        small_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04\x01\x0a\x00\x01\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x4c\x01\x00\x3b'
+
+        cls.first_post.image = SimpleUploadedFile(name=f'{str(uuid1())}.gif', content=small_gif, content_type='image/gif')
+
         cls.first_post.save()
-        cls.post_check_urls = [
-            reverse('posts'),
-            reverse('post', args=[cls.first_post.author, cls.first_post.pk]),
-            reverse('group-posts', args=[cls.first_group.slug]),
-            reverse('profile', args=[cls.first_user.username]),
-        ]
+        cls.post_check_urls = [reverse('posts'), reverse('post', args=[cls.first_post.author, cls.first_post.pk]), reverse('group-posts', args=[cls.first_group.slug]), reverse('profile', args=[cls.first_user.username])]
 
     @classmethod
     def tearDownClass(cls):

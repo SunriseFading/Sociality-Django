@@ -1,3 +1,4 @@
+import contextlib
 import os
 from shutil import rmtree
 from uuid import uuid1
@@ -21,10 +22,8 @@ class FormsTests(TestCase):
         super().setUpClass()
         test_form_media_root = os.path.join(settings.MEDIA_ROOT,
                                             'test_temp_files')
-        try:
+        with contextlib.suppress(FileExistsError):
             os.mkdir(test_form_media_root)
-        except FileExistsError:
-            pass
         settings.MEDIA_ROOT = test_form_media_root
         cls.first_user = User.objects.create_user(
             username=str(uuid1()))
@@ -74,17 +73,10 @@ class FormsTests(TestCase):
         Authorised user can create posts with 'new-post' page
         """
         new_post_text = str(uuid1())
-        response = self.authorized_client.post(
-            reverse('new-post'),
-            {'text': new_post_text,
-             'group': self.first_group.pk, },
-            follow=True)
-        matches = 0
-        for post in response.context['posts']:
-            if (post.text == new_post_text and
-                post.group == self.first_group and
-                post.author == self.first_user):
-                matches += 1
+        response = self.authorized_client.post(reverse('new-post'), {'text': new_post_text, 'group': self.first_group.pk}, follow=True)
+
+        matches = sum(post.text == new_post_text and post.group == self.first_group and post.author == self.first_user for post in response.context['posts'])
+
         self.assertEqual(matches, 1, 'Something wrong with new-post page')
 
     def test_foreign_post_edit_forbidden(self):
@@ -177,25 +169,13 @@ class FormsTests(TestCase):
         Testing create a post form with a simple image
         """
         post_text = str(uuid1())
-        pic_file_name = str(uuid1()) + '.gif'
-        # anyway I couldn't feed a PIL Image object to SimpleUploadFile
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04'
-            b'\x01\x0a\x00\x01\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02'
-            b'\x02\x4c\x01\x00\x3b'
-        )
-        self.authorized_client.post(
-            reverse('new-post'),
-            {'text': post_text,
-             'group': self.first_group.pk,
-             'image': SimpleUploadedFile(name=pic_file_name,
-                                         content=small_gif,
-                                         content_type='image/gif')
-             },
-        )
+        pic_file_name = f'{str(uuid1())}.gif'
+        small_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04\x01\x0a\x00\x01\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x4c\x01\x00\x3b'
+
+        self.authorized_client.post(reverse('new-post'), {'text': post_text, 'group': self.first_group.pk, 'image': SimpleUploadedFile(name=pic_file_name, content=small_gif, content_type='image/gif')})
+
         new_post = Post.objects.get(text__exact=post_text)
-        self.assertTrue(
-            pic_file_name in new_post.image.name)
+        self.assertTrue(pic_file_name in new_post.image.name)
 
     def test_post_form_with_txt_file_error(self):
         """

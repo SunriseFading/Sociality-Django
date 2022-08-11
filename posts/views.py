@@ -164,11 +164,7 @@ class ItemsListMixin:
         paginator = Paginator(self.query_set, 10)
         page_number = request.GET.get('page', 1)
         paginated_qs = paginator.get_page(page_number)
-        return render(request, self.template, {
-            self.qs_name: paginated_qs,
-            'paginator': paginator,
-            'page': paginator.page(page_number if page_number else 1),
-        })
+        return render(request, self.template, {self.qs_name: paginated_qs, 'paginator': paginator, 'page': paginator.page(page_number or 1)})
 
 
 class GroupsList(ItemsListMixin, View):
